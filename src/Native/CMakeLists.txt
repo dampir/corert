@@ -33,18 +33,22 @@ elseif (CMAKE_SYSTEM_PROCESSOR STREQUAL armv7l)
     # Because we don't use CMAKE_C_COMPILER/CMAKE_CXX_COMPILER to use clang
     # we have to set the triple by adding a compiler argument
     if(TOOLCHAIN STREQUAL arm-linux-gnueabi)
-        add_compile_options(-target armv7-linux-gnueabi)
+        if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+            add_compile_options(-target armv7-linux-gnueabi)
+        endif ()
         add_compile_options(-mfloat-abi=softfp)
     else ()
-        add_compile_options(-target armv7-linux-gnueabihf)
+        if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+            add_compile_options(-target armv7-linux-gnueabihf)
+        endif ()
     endif ()
     add_compile_options(-mthumb)
     add_compile_options(-mfpu=vfpv3)
 elseif (CMAKE_SYSTEM_PROCESSOR STREQUAL aarch64)
     set(IS_64BIT_BUILD 1)
-    # Because we don't use CMAKE_C_COMPILER/CMAKE_CXX_COMPILER to use clang
-    # we have to set the triple by adding a compiler argument
-    add_compile_options(-target aarch64-linux-gnu)
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        add_compile_options(-target aarch64-linux-gnu)
+    endif ()
 endif ()
 
 if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
@@ -96,9 +100,12 @@ if (CLR_CMAKE_PLATFORM_UNIX)
     add_compile_options(-Wall)
     add_compile_options(-Werror)
     add_compile_options(-Wno-invalid-offsetof)
-    add_compile_options(-Wno-null-arithmetic)
-    add_compile_options(-Wno-null-conversion)
-
+    
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        add_compile_options(-Wno-null-arithmetic)
+        add_compile_options(-Wno-null-conversion)
+    endif ()
+    
     if (CLR_CMAKE_PLATFORM_UNIX_TARGET_AMD64)
         # Allow 16 byte compare-exchange
         add_compile_options(-mcx16)
@@ -112,13 +119,19 @@ if (CLR_CMAKE_PLATFORM_UNIX)
     add_compile_options(-fms-extensions)
 
     add_compile_options(-fPIC)
-    add_compile_options(-fvisibility=hidden)
+    add_compile_options(-fvisibility=default)
+
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        add_compile_options(-fno-leading-underscore)
+    endif ()
 
     if(CLR_CMAKE_PLATFORM_DARWIN)
         # We cannot enable "stack-protector-strong" on OS X due to a bug in clang compiler (current version 7.0.2)
         add_compile_options(-fstack-protector)
     else()
-        add_compile_options(-fstack-protector-strong)
+        if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+            add_compile_options(-fstack-protector-strong)
+        endif()
     endif(CLR_CMAKE_PLATFORM_DARWIN)
 
     if(CLR_CMAKE_PLATFORM_LINUX)
@@ -225,9 +238,9 @@ include(configure.cmake)
 if(WIN32)
   add_subdirectory(gc)
 endif()
-add_subdirectory(Runtime)
-add_subdirectory(Bootstrap)
-add_subdirectory(jitinterface)
+#add_subdirectory(Runtime)
+#add_subdirectory(Bootstrap)
+#add_subdirectory(jitinterface)
 
 # We don't need the PAL on Windows.
 if(CLR_CMAKE_PLATFORM_UNIX)
