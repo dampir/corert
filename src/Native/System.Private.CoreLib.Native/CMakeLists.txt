@@ -18,6 +18,11 @@ add_library(System.Private.CoreLib.Native
     ${NATIVE_SOURCES}
 )
 
+add_library(System.Private.CoreLib.Native-Dynamic
+    SHARED
+    ${NATIVE_SOURCES}
+)
+
 if (CMAKE_SYSTEM_NAME STREQUAL Linux)
     target_link_libraries(System.Private.CoreLib.Native rt)
 endif ()
@@ -25,3 +30,4 @@ endif ()
 include(configure.cmake)
 
 install (TARGETS System.Private.CoreLib.Native DESTINATION lib)
+install (TARGETS System.Private.CoreLib.Native-Dynamic DESTINATION lib)
