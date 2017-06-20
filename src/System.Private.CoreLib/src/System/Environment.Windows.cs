@@ -4,12 +4,18 @@
 
 namespace System
 {
-    internal static partial class Environment
+#if MONO
+    public 
+#else
+    internal 
+#endif
+    static partial class Environment
     {
         internal static int CurrentNativeThreadId => unchecked((int)Interop.mincore.GetCurrentThreadId());
 
         internal static long TickCount64 => (long)Interop.mincore.GetTickCount64();
 
+#if !MONO        
         public static int ProcessorCount
         {
             get
@@ -20,7 +26,7 @@ namespace System
                 return (int)info.dwNumberOfProcessors;
             }
         }
-
+#endif
         private static int ComputeExecutionId() => (int)Interop.mincore.GetCurrentProcessorNumber();
     }
 }

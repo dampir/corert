@@ -4,6 +4,9 @@
 
 using Microsoft.Win32.SafeHandles;
 using System;
+#if MONO
+using System.Diagnostics.Private;
+#endif
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -28,21 +31,33 @@ namespace Internal.Runtime.Augments
         /// </summary>
         private WaitHandleArray<IntPtr> _waitedHandles;
 
+#if MONO
+        private void Windows_PlatformSpecificInitialize()
+#else
         private void PlatformSpecificInitialize()
+#endif
         {
             _waitedHandles = new WaitHandleArray<IntPtr>(elementInitializer: null);
         }
 
         // Platform-specific initialization of foreign threads, i.e. threads not created by Thread.Start
+#if MONO
+        private void Windows_PlatformSpecificInitializeExistingThread()
+#else
         private void PlatformSpecificInitializeExistingThread()
+#endif
         {
             _osHandle = GetOSHandleForCurrentThread();
         }
 
+#if MONO
+        private SafeWaitHandle[] Windows_RentWaitedSafeWaitHandleArray(int requiredCapacity)
+#else
         /// <summary>
         /// Callers must ensure to clear and return the array after use
         /// </summary>
         internal SafeWaitHandle[] RentWaitedSafeWaitHandleArray(int requiredCapacity)
+#endif
         {
             Debug.Assert(this == CurrentThread);
 
@@ -55,8 +70,11 @@ namespace Internal.Runtime.Augments
             _waitedSafeWaitHandles.EnsureCapacity(requiredCapacity);
             return _waitedSafeWaitHandles.RentItems();
         }
-
+#if MONO
+        internal void Windows_ReturnWaitedSafeWaitHandleArray(SafeWaitHandle[] waitedSafeWaitHandles)
+#else
         internal void ReturnWaitedSafeWaitHandleArray(SafeWaitHandle[] waitedSafeWaitHandles)
+#endif
         {
             Debug.Assert(this == CurrentThread);
             _waitedSafeWaitHandles.ReturnItems(waitedSafeWaitHandles);
@@ -160,19 +178,31 @@ namespace Internal.Runtime.Augments
             }
         }
 
+#if MONO
+        private ThreadPriority Windows_GetPriorityLive()
+#else
         private ThreadPriority GetPriorityLive()
+#endif
         {
             Debug.Assert(!_osHandle.IsInvalid);
             return MapFromOSPriority(Interop.mincore.GetThreadPriority(_osHandle));
         }
 
+#if MONO
+        private bool Windows_SetPriorityLive(ThreadPriority priority)
+#else
         private bool SetPriorityLive(ThreadPriority priority)
+#endif
         {
             Debug.Assert(!_osHandle.IsInvalid);
             return Interop.mincore.SetThreadPriority(_osHandle, (int)MapToOSPriority(priority));
         }
 
+#if MONO
+        private ThreadState Windows_GetThreadState()
+#else
         private ThreadState GetThreadState()
+#endif
         {
             int state = _threadState;
             // If the thread is marked as alive, check if it has finished execution
@@ -191,7 +221,11 @@ namespace Internal.Runtime.Augments
             return (ThreadState)state;
         }
 
+#if MONO
+        private bool Windows_JoinInternal(int millisecondsTimeout)
+#else
         private bool JoinInternal(int millisecondsTimeout)
+#endif
         {
             // This method assumes the thread has been started
             Debug.Assert(!GetThreadStateBit(ThreadState.Unstarted) || (millisecondsTimeout == 0));
@@ -234,7 +268,11 @@ namespace Internal.Runtime.Augments
             }
         }
 
+#if MONO
+        private bool Windows_CreateThread(GCHandle thisThreadHandle)
+#else
         private bool CreateThread(GCHandle thisThreadHandle)
+#endif
         {
             const int AllocationGranularity = 0x10000;  // 64 KiB
 
@@ -257,7 +295,14 @@ namespace Internal.Runtime.Augments
 
             uint threadId;
             _osHandle = Interop.mincore.CreateThread(IntPtr.Zero, (IntPtr)stackSize,
-                AddrofIntrinsics.AddrOf<Interop.mincore.ThreadProc>(ThreadEntryPoint), (IntPtr)thisThreadHandle,
+
+#if MONO
+                AddrofIntrinsics.AddrOf<Interop.mincore.ThreadProc>(Windows_ThreadEntryPoint), 
+#else
+                AddrofIntrinsics.AddrOf<Interop.mincore.ThreadProc>(ThreadEntryPoint),
+#endif
+
+                (IntPtr)thisThreadHandle,
                 (uint)(Interop.Constants.CreateSuspended | Interop.Constants.StackSizeParamIsAReservation),
                 out threadId);
 
@@ -273,11 +318,19 @@ namespace Internal.Runtime.Augments
             return true;
         }
 
+#if MONO
+        /// <summary>
+        /// This an entry point for managed threads created by applicatoin
+        /// </summary>
+        [NativeCallable(CallingConvention = CallingConvention.StdCall)]
+        private static uint Windows_ThreadEntryPoint(IntPtr parameter)
+#else
         /// <summary>
         /// This an entry point for managed threads created by applicatoin
         /// </summary>
         [NativeCallable(CallingConvention = CallingConvention.StdCall)]
         private static uint ThreadEntryPoint(IntPtr parameter)
+#endif
         {
             StartThread(parameter);
             return 0;
@@ -286,14 +339,27 @@ namespace Internal.Runtime.Augments
         public ApartmentState GetApartmentState() { throw null; }
         public bool TrySetApartmentState(ApartmentState state) { throw null; }
         public void DisableComObjectEagerCleanup() { throw null; }
-        public void Interrupt() { throw null; }
 
+#if MONO
+        internal void Windows_Interrupt() { throw null; }
+#else
+        public void Interrupt() { throw null; }
+#endif
+
+#if MONO
+        internal static void Windows_UninterruptibleSleep0()
+#else
         internal static void UninterruptibleSleep0()
+#endif
         {
             Interop.mincore.Sleep(0);
         }
 
+#if MONO
+        private static void Windows_SleepInternal(int millisecondsTimeout)
+#else
         private static void SleepInternal(int millisecondsTimeout)
+#endif
         {
             Debug.Assert(millisecondsTimeout >= -1);
             Interop.mincore.Sleep((uint)millisecondsTimeout);
@@ -304,19 +370,32 @@ namespace Internal.Runtime.Augments
         // This should be used by code that's expected to be called inside the STA message pump, so that it won't 
         // reenter itself.  In an ASTA, this should only be the CCW implementations of IUnknown and IInspectable.
         //
+#if MONO
+        internal static void Windows_SuppressReentrantWaits()
+#else
         internal static void SuppressReentrantWaits()
+#endif
         {
             t_reentrantWaitSuppressionCount++;
         }
 
+#if MONO
+        internal static void Windows_RestoreReentrantWaits()
+#else
         internal static void RestoreReentrantWaits()
+#endif
         {
             Debug.Assert(t_reentrantWaitSuppressionCount > 0);
             t_reentrantWaitSuppressionCount--;
         }
 
+#if MONO
+        internal static bool Windows_ReentrantWaitsEnabled =>
+            GetCurrentApartmentType() == ApartmentType.STA && t_reentrantWaitSuppressionCount == 0;
+#else
         internal static bool ReentrantWaitsEnabled =>
             GetCurrentApartmentType() == ApartmentType.STA && t_reentrantWaitSuppressionCount == 0;
+#endif
 
         internal static ApartmentType GetCurrentApartmentType()
         {

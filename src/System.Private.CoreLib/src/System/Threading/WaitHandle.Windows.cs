@@ -2,6 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+#if MONO
+using System.Diagnostics.Private;
+#endif
 using System.Diagnostics;
 using System.IO;
 using System.Runtime;
@@ -94,7 +97,11 @@ namespace System.Threading
             return result;
         }
 
+#if MONO
+        private static bool Windows_WaitOneCore(IntPtr handle, int millisecondsTimeout)
+#else
         private static bool WaitOneCore(IntPtr handle, int millisecondsTimeout)
+#endif
         {
             Debug.Assert(millisecondsTimeout >= -1);
 
@@ -154,11 +161,19 @@ namespace System.Threading
             }
         }
 
+#if MONO
+        private static int Windows_WaitAnyCore(
+            RuntimeThread currentThread,
+            SafeWaitHandle[] safeWaitHandles,
+            WaitHandle[] waitHandles,
+            int millisecondsTimeout)
+#else
         private static int WaitAnyCore(
             RuntimeThread currentThread,
             SafeWaitHandle[] safeWaitHandles,
             WaitHandle[] waitHandles,
             int millisecondsTimeout)
+#endif
         {
             Debug.Assert(currentThread == RuntimeThread.CurrentThread);
             Debug.Assert(safeWaitHandles != null);
@@ -186,11 +201,19 @@ namespace System.Threading
             return ret;
         }
 
+#if MONO
+        private static bool Windows_WaitAllCore(
+            RuntimeThread currentThread,
+            SafeWaitHandle[] safeWaitHandles,
+            WaitHandle[] waitHandles,
+            int millisecondsTimeout)
+#else
         private static bool WaitAllCore(
             RuntimeThread currentThread,
             SafeWaitHandle[] safeWaitHandles,
             WaitHandle[] waitHandles,
             int millisecondsTimeout)
+#endif
         {
             Debug.Assert(currentThread == RuntimeThread.CurrentThread);
             Debug.Assert(safeWaitHandles != null);
@@ -210,7 +233,11 @@ namespace System.Threading
             return ret != WaitTimeout;
         }
 
+#if MONO
+        private static bool Windows_SignalAndWaitCore(IntPtr handleToSignal, IntPtr handleToWaitOn, int millisecondsTimeout)
+#else
         private static bool SignalAndWaitCore(IntPtr handleToSignal, IntPtr handleToWaitOn, int millisecondsTimeout)
+#endif
         {
             Debug.Assert(millisecondsTimeout >= -1);
 

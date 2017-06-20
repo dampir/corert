@@ -6,6 +6,10 @@ internal static partial class Interop
 {
     internal static partial class Libraries
     {
+    	#if MONO
+        internal const string CoreLibNative = "System.Native.CoreRT";
+        #else
         internal const string CoreLibNative = "System.Private.CoreLib.Native";
+        #endif
     }
 }

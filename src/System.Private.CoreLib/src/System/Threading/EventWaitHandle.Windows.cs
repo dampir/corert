@@ -2,6 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+#if MONO
+using System.Diagnostics.Private;
+#endif
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Runtime.InteropServices;
@@ -18,7 +21,11 @@ namespace System.Threading
             SafeWaitHandle = handle;
         }
 
+#if MONO
+        private static void Windows_VerifyNameForCreate(string name)
+#else
         private static void VerifyNameForCreate(string name)
+#endif
         {
             if (null != name && ((int)Interop.Constants.MaxPath) < name.Length)
             {
@@ -26,7 +33,11 @@ namespace System.Threading
             }
         }
 
+#if MONO
+        private void Windows_CreateEventCore(bool initialState, EventResetMode mode, string name, out bool createdNew)
+#else
         private void CreateEventCore(bool initialState, EventResetMode mode, string name, out bool createdNew)
+#endif
         {
             Debug.Assert((mode == EventResetMode.AutoReset) || (mode == EventResetMode.ManualReset));
             Debug.Assert(name == null || name.Length <= (int)Interop.Constants.MaxPath);
@@ -60,7 +71,11 @@ namespace System.Threading
             SafeWaitHandle = _handle;
         }
 
+#if MONO
+        private static OpenExistingResult Windows_OpenExistingWorker(string name, out EventWaitHandle result)
+#else
         private static OpenExistingResult OpenExistingWorker(string name, out EventWaitHandle result)
+#endif
         {
             if (name == null)
             {
@@ -100,7 +115,11 @@ namespace System.Threading
             return OpenExistingResult.Success;
         }
 
+#if MONO
+        private static bool Windows_ResetCore(IntPtr handle)
+#else
         private static bool ResetCore(IntPtr handle)
+#endif
         {
             bool res = Interop.mincore.ResetEvent(handle);
             if (!res)
@@ -108,7 +127,11 @@ namespace System.Threading
             return res;
         }
 
+#if MONO
+        private static bool Windows_SetCore(IntPtr handle)
+#else
         private static bool SetCore(IntPtr handle)
+#endif
         {
             bool res = Interop.mincore.SetEvent(handle);
             if (!res)

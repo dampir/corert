@@ -14,6 +14,9 @@
 ** 
 ===========================================================*/
 
+#if MONO
+using System.Diagnostics.Private;
+#endif
 using System;
 using System.Threading;
 using System.Runtime.ConstrainedExecution;
@@ -118,13 +121,20 @@ namespace System.Runtime.InteropServices
       1) Requires some magic to run the critical finalizer.
     */
 
-    public abstract class SafeHandle : CriticalFinalizerObject, IDisposable
+    public abstract 
+#if MONO
+    partial
+#endif
+    class SafeHandle : CriticalFinalizerObject, IDisposable
     {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2111:PointersShouldNotBeVisible")]
         protected IntPtr handle;        // PUBLICLY DOCUMENTED handle field
 
         private int _state;            // Combined ref count and closed/disposed flags (so we can atomically modify them).
         private bool _ownsHandle;       // Whether we can release this handle.
+#if MONO
+        private bool _fullyInitialized;  // Whether constructor completed.
+#endif
 
         // Bitmasks for the _state field above.
         private static class StateBits
@@ -146,6 +156,14 @@ namespace System.Runtime.InteropServices
 
             if (!ownsHandle)
                 GC.SuppressFinalize(this);
+
+#if MONO
+            // Set this last to prevent SafeHandle's finalizer from freeing an
+            // invalid handle.  This means we don't have to worry about 
+            // ThreadAbortExceptions interrupting this constructor or the managed
+            // constructors on subclasses that call this constructor.
+           _fullyInitialized = true;
+#endif
         }
 
         //
@@ -202,7 +220,7 @@ namespace System.Runtime.InteropServices
         internal void InitializeHandle(IntPtr _handle)
         {
             // The SafeHandle should be invalid to be able to initialize it
-            System.Diagnostics.Debug.Assert(IsInvalid);
+            Debug.Assert(IsInvalid);
 
             handle = _handle;
         }
@@ -252,6 +270,7 @@ namespace System.Runtime.InteropServices
             GC.SuppressFinalize(this);
         }
 
+#if !MONO
         public void SetHandleAsInvalid()
         {
             int oldState, newState;
@@ -265,7 +284,7 @@ namespace System.Runtime.InteropServices
                 newState = oldState | StateBits.Closed;
             } while (Interlocked.CompareExchange(ref _state, newState, oldState) != oldState);
         }
-
+#endif
         // Implement this abstract method in your derived class to specify how to
         // free the handle. Be careful not write any code that's subject to faults
         // in this method (the runtime will prepare the infrastructure for you so
@@ -276,6 +295,7 @@ namespace System.Runtime.InteropServices
         // MDA is enabled.
         protected abstract bool ReleaseHandle();
 
+#if !MONO
         // Add a reason why this handle should not be relinquished (i.e. have
         // ReleaseHandle called on it). This method has dangerous in the name since
         // it must always be used carefully (e.g. called within a CER) to avoid
@@ -308,7 +328,7 @@ namespace System.Runtime.InteropServices
         {
             InternalRelease(false);
         }
-
+#endif
         // Do not call this directly - only call through the extension method SafeHandleExtensions.DangerousAddRef.
         internal void DangerousAddRef_WithNoNullCheck()
         {
@@ -435,19 +455,6 @@ namespace System.Runtime.InteropServices
             // method on the SafeHandle subclass.
             if (fPerformRelease)
                 ReleaseHandle();
-        }
-    }
-
-    internal static class SafeHandleExtensions
-    {
-        public static void DangerousAddRef(this SafeHandle safeHandle)
-        {
-            // This check provides rough compatibility with the desktop code (this code's desktop counterpart is AcquireSafeHandleFromWaitHandle() inside clr.dll)
-            // which throws ObjectDisposed if someone passes an uninitialized WaitHandle into one of the Wait apis. We use an extension method
-            // because otherwise, the "null this" would trigger a NullReferenceException before we ever get to this check.
-            if (safeHandle == null)
-                throw new ObjectDisposedException(SR.ObjectDisposed_Generic);
-            safeHandle.DangerousAddRef_WithNoNullCheck();
         }
     }
 }
