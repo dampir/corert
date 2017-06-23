@@ -2,7 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+#if MONO
+using System.Diagnostics.Private;
+#else
 using System.Diagnostics;
+#endif
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
@@ -17,7 +21,11 @@ namespace System.Threading
             SafeWaitHandle = handle;
         }
 
+#if MONO
+        private static void Windows_VerifyNameForCreate(string name)
+#else
         private static void VerifyNameForCreate(string name)
+#endif
         {
             if (null != name && MAX_PATH < name.Length)
             {
@@ -25,7 +33,11 @@ namespace System.Threading
             }
         }
 
+#if MONO
+        private void Windows_CreateSemaphoreCore(int initialCount, int maximumCount, string name, out bool createdNew)
+#else
         private void CreateSemaphoreCore(int initialCount, int maximumCount, string name, out bool createdNew)
+#endif
         {
             Debug.Assert(initialCount >= 0);
             Debug.Assert(maximumCount >= 1);
@@ -54,7 +66,11 @@ namespace System.Threading
             SafeWaitHandle = myHandle;
         }
 
+#if MONO
+        private static OpenExistingResult Windows_OpenExistingWorker(string name, out Semaphore result)
+#else
         private static OpenExistingResult OpenExistingWorker(string name, out Semaphore result)
+#endif
         {
             if (name == null)
             {
@@ -90,7 +106,11 @@ namespace System.Threading
             return OpenExistingResult.Success;
         }
 
+#if MONO
+        private static int Windows_ReleaseCore(IntPtr handle, int releaseCount)
+#else
         private static int ReleaseCore(IntPtr handle, int releaseCount)
+#endif
         {
             Debug.Assert(releaseCount > 0);
 

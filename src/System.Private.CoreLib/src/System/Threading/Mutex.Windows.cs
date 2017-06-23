@@ -2,6 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+#if MONO
+using System.Diagnostics.Private;
+#endif
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Runtime.InteropServices;
@@ -13,7 +16,11 @@ namespace System.Threading
     {
         private const uint AccessRights = (uint)(Interop.Constants.MaximumAllowed | Interop.Constants.Synchronize | Interop.Constants.MutexModifyState);
 
+#if MONO
+        private static void Windows_VerifyNameForCreate(string name)
+#else
         private static void VerifyNameForCreate(string name)
+#endif
         {
             if (null != name && ((int)Interop.Constants.MaxPath) < name.Length)
             {
@@ -21,7 +28,11 @@ namespace System.Threading
             }
         }
 
+#if MONO
+        private void Windows_CreateMutexCore(bool initiallyOwned, string name, out bool createdNew)
+#else
         private void CreateMutexCore(bool initiallyOwned, string name, out bool createdNew)
+#endif
         {
             Debug.Assert(name == null || name.Length <= (int)Interop.Constants.MaxPath);
 
@@ -42,7 +53,11 @@ namespace System.Threading
             SafeWaitHandle = mutexHandle;
         }
 
+#if MONO
+        private static OpenExistingResult Windows_OpenExistingWorker(string name, out Mutex result)
+#else
         private static OpenExistingResult OpenExistingWorker(string name, out Mutex result)
+#endif
         {
             if (name == null)
             {
@@ -82,7 +97,11 @@ namespace System.Threading
             return OpenExistingResult.Success;
         }
 
+#if MONO
+        private static void Windows_ReleaseMutexCore(IntPtr handle)
+#else
         private static void ReleaseMutexCore(IntPtr handle)
+#endif
         {
             if (!Interop.mincore.ReleaseMutex(handle))
             {

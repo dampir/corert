@@ -82,6 +82,11 @@ namespace System.Threading
         // increase the count on a semaphore, returns previous count
         public int Release() => ReleaseCore(1);
 
+#if MONO
+        // increase the count on a semaphore, returns previous count
+        internal int ReleaseSemaphore() => ReleaseCore(1);
+#endif
+
         // increase the count on a semaphore, returns previous count
         public int Release(int releaseCount)
         {
