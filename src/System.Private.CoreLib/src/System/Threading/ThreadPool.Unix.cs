@@ -21,7 +21,11 @@ namespace System.Threading
         /// It should by high enough to provide sufficient number of thread pool workers
         /// in case if some threads get blocked while running user code.
         /// </summary>
+#if MONO
+        private static readonly int Unix_MaxThreadCount = 4 * ThreadPoolGlobals.processorCount;
+#else
         private static readonly int MaxThreadCount = 4 * ThreadPoolGlobals.processorCount;
+#endif
 
         /// <summary>
         /// Semaphore that is used to release waiting thread pool workers when new work becomes available.
@@ -33,13 +37,21 @@ namespace System.Threading
         /// </summary>
         private static volatile int s_workerCount = 0;
 
+#if MONO
+        public static bool Unix_SetMaxThreads(int workerThreads, int completionPortThreads)
+#else
         public static bool SetMaxThreads(int workerThreads, int completionPortThreads)
+#endif
         {
             // Not supported at present
             return false;
         }
 
+#if MONO
+        public static void Unix_GetMaxThreads(out int workerThreads, out int completionPortThreads)
+#else
         public static void GetMaxThreads(out int workerThreads, out int completionPortThreads)
+#endif
         {
             // Note that worker threads and completion port threads share the same thread pool.
             // The total number of threads cannot exceed MaxThreadCount.
@@ -47,20 +59,32 @@ namespace System.Threading
             completionPortThreads = MaxThreadCount;
         }
 
+#if MONO
+        public static bool Unix_SetMinThreads(int workerThreads, int completionPortThreads)
+#else
         public static bool SetMinThreads(int workerThreads, int completionPortThreads)
+#endif
         {
             // Not supported at present
             return false;
         }
 
+#if MONO
+        public static void Unix_GetMinThreads(out int workerThreads, out int completionPortThreads)
+#else
         public static void GetMinThreads(out int workerThreads, out int completionPortThreads)
+#endif
         {
             // All threads are pre-created at present
             workerThreads = MaxThreadCount;
             completionPortThreads = MaxThreadCount;
         }
 
+#if MONO
+        public static void Unix_GetAvailableThreads(out int workerThreads, out int completionPortThreads)
+#else
         public static void GetAvailableThreads(out int workerThreads, out int completionPortThreads)
+#endif
         {
             // Make sure we return a non-negative value if thread pool defaults are changed
             int availableThreads = Math.Max(MaxThreadCount - ThreadPoolGlobals.workQueue.numWorkingThreads, 0);
@@ -72,7 +96,11 @@ namespace System.Threading
         /// <summary>
         /// This method is called to request a new thread pool worker to handle pending work.
         /// </summary>
+#if MONO
+        internal static void Unix_QueueDispatch()
+#else
         internal static void QueueDispatch()
+#endif
         {
             // For simplicity of the state management, we pre-create all thread pool workers on the first
             // request and then use the semaphore to release threads as new requests come in.
