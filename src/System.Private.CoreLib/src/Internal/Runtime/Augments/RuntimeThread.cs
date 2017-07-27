@@ -4,6 +4,9 @@
 
 using Microsoft.Win32.SafeHandles;
 using System;
+#if MONO
+using System.Diagnostics.Private;
+#endif
 using System.Diagnostics;
 using System.Runtime;
 using System.Runtime.InteropServices;
@@ -41,6 +44,7 @@ namespace Internal.Runtime.Augments
         /// </summary>
         private WaitHandleArray<SafeWaitHandle> _waitedSafeWaitHandles;
 
+#if !MONO
         private RuntimeThread()
         {
             _waitedSafeWaitHandles = new WaitHandleArray<SafeWaitHandle>(elementInitializer: null);
@@ -54,6 +58,7 @@ namespace Internal.Runtime.Augments
 
             PlatformSpecificInitialize();
         }
+#endif
 
         // Constructor for threads created by the Thread class
         private RuntimeThread(Delegate threadStart, int maxStackSize)
